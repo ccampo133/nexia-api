@@ -1,13 +1,15 @@
 package me.ccampo.nexia.util
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.kittinunf.fuel.core.FuelError
 import com.github.kittinunf.fuel.core.Headers
 import com.github.kittinunf.fuel.core.Request
 import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.fuel.core.ResponseResultOf
-import com.github.kittinunf.fuel.jackson.defaultMapper
 import com.github.kittinunf.result.Result
 
 fun <T : Any> ResponseResultOf<T>.request(): Request {
@@ -35,7 +37,7 @@ val Headers.Companion.X_REQUESTED_WITH: String
     get() = "X-Requested-With"
 
 // Set some required Jackson stuff
-fun jacksonInit() {
-    defaultMapper.propertyNamingStrategy = PropertyNamingStrategy.SNAKE_CASE
-    defaultMapper.registerModule(JavaTimeModule())
-}
+val defaultObjectMapper: ObjectMapper = ObjectMapper().registerKotlinModule()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
+        .registerModule(JavaTimeModule())
