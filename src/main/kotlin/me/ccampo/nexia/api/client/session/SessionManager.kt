@@ -7,31 +7,22 @@ import me.ccampo.nexia.api.NexiaConfiguration
 import me.ccampo.nexia.util.cookie
 import me.ccampo.nexia.util.response
 import org.jsoup.Jsoup
-import java.time.Duration
-import java.time.Instant
-import java.time.temporal.ChronoUnit
+import java.time.LocalTime
 
-class SessionManager(val config: NexiaConfiguration, val fuel: FuelManager) {
+class SessionManager(private val config: NexiaConfiguration, private val fuel: FuelManager) {
 
-    var session: Session? = null
+    var session: Session
         private set
         @Synchronized get() {
-            if (field == null) {
+            if (field.isExpiringSoon) {
                 field = login()
-                return field
             }
-
-            //TODO: I think there's a potential race condition here... investigate -ccampo 2019-06-04
-            val ttl = Duration.between(Instant.now(), field!!.expiresAt)
-
-            // Session is about to expire... renew it
-            if (ttl.isNegative || ttl <= Duration.of(1, ChronoUnit.MINUTES)) {
-                field = login()
-                return field
-            }
-
             return field
         }
+
+    init {
+        session = login()
+    }
 
     private fun login(): Session {
         val (_, loginResponse, loginResult) = fuel.get("${config.baseUrl}/login")
@@ -76,7 +67,7 @@ class SessionManager(val config: NexiaConfiguration, val fuel: FuelManager) {
                 .responseString()
 
         if (!response.isSuccessful) {
-            throw IllegalStateException("Unsuccessful session check; could be invalid credentials?")
+            throw IllegalStateException("Could not validate session; could be invalid credentials?")
         }
 
         if (!"expired".equals(result.get(), ignoreCase = true)) {
